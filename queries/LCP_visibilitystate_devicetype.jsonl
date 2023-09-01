@@ -1,0 +1,16 @@
+{
+    "description": "Histogram of LCP per visibility state per device type for the last applicable date",
+    "datetype": "single",
+    "processingtype": "histogram",
+    "extractmetric": "visibilitystate",
+    "extracthistogram": "LCPHISTOGRAM",
+    "sql": "
+        SELECT DATE as date, 
+        VISIBILITYSTATE as visibilitystate, 
+        DEVICETYPE as device, COUNT(*) as rowcount, SUM(BEACONS) as beaconcount, 
+        `akamai-mpulse-rumarchive.rumarchive.COMBINE_HISTOGRAMS`(ARRAY_AGG(LCPHISTOGRAM)) AS LCPHISTOGRAM,
+        FROM `akamai-mpulse-rumarchive.rumarchive.rumarchive_page_loads` 
+        WHERE {{LAST_DATE}}
+        GROUP BY DATE, DEVICETYPE, VISIBILITYSTATE 
+        ORDER BY DATE ASC, DEVICETYPE ASC, VISIBILITYSTATE ASC"
+}

@@ -1,7 +1,5 @@
 
 function processRawBigquery(rows, metricFieldName) {
-    console.log("Processing raw BigQuery data", rows);
-
     /*
         Incoming data are rows of raw bigquery results.
         We assume the rows are ordered by ASC date!
@@ -93,6 +91,7 @@ function processRawBigquery(rows, metricFieldName) {
             },
         To
             {
+                "useragent": "ev-crawler",
                 "client": "desktop",
                 "date": "2020_01_01",
                 "percent": "0.0"
@@ -122,7 +121,43 @@ function processRawBigquery(rows, metricFieldName) {
     return output;
 }
 
+function processHistogramBigquery(rows, metricFieldName, histogramFieldName) {
+    let output = [];
+    
+    for( let row of rows ) {
+        let histogram = JSON.parse( row[histogramFieldName] );
+
+        const datapoint = {};
+        
+        if ( row.device )
+            datapoint.client = row.device.toLowerCase();
+        else
+            datapoint.client = "unknown";
+
+        datapoint.date = row.date.value.replaceAll("-", "_"); // "2022-12-01" to "2022_12_01"
+
+        // const deviceCount = dateCounts.get( row.date.value ).get( row.device );
+        // datapoint.percent = ((row.beaconcount / deviceCount.beaconCount) * 100).toFixed(1);
+
+        datapoint[metricFieldName] = row[metricFieldName]; // e.g., .protocol, .useragent, etc.
+
+        // highcharts uses raw timestamps, so pre-calculate them
+        datapoint.timestamp = "" + (new Date( row.date.value ).getTime());
+
+        // keep only high precision buckets without the bucket number
+        // TODO: document a bit better what I'm doing here ;) 
+        datapoint.histogram = Object.values(Object.entries(histogram).filter( o => parseInt(o[0]) > 0 && parseInt(o[0]) < 101).map( o => o[1] ));
+
+        output.push( datapoint );
+    }
+
+    // console.log( output );
+
+    return output;
+}
+
 
 module.exports = {
-    processRawBigquery
+    processRawBigquery,
+    processHistogramBigquery
 }
