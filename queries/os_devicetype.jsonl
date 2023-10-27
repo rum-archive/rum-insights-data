@@ -1,16 +1,16 @@
 {
-    "description": "Timeseries of the different user agent families per device type seen in the RUM Archive dataset",
+    "description": "Timeseries of the different OSes per device type seen in the RUM Archive dataset",
     "datetype": "timeseries",
     "processingtype": "metricPerDevice",
-    "extractmetric": "useragent",
+    "extractmetric": "os",
     "sql": "
         SELECT DATE as date, 
-        USERAGENTFAMILY as useragent, 
+        OS as os, 
         DEVICETYPE as device, 
         COUNT(*) as rowcount, 
         SUM(BEACONS) as beaconcount
         FROM `akamai-mpulse-rumarchive.rumarchive.rumarchive_page_loads` 
         WHERE {{TIMESERIES_DATES}}
-        GROUP BY DATE, DEVICETYPE, USERAGENTFAMILY 
-        ORDER BY DATE ASC, DEVICETYPE ASC, USERAGENTFAMILY ASC"
+        GROUP BY DATE, DEVICETYPE, OS 
+        ORDER BY DATE ASC, DEVICETYPE ASC, OS ASC"
 }

@@ -1,0 +1,15 @@
+{
+    "description": "Timeseries of the different device types seen in the RUM Archive dataset",
+    "datetype": "timeseries",
+    "processingtype": "metricGlobal",
+    "extractmetric": "device",
+    "sql": "
+        SELECT DATE as date,
+        DEVICETYPE as device, 
+        COUNT(*) as rowcount, 
+        SUM(BEACONS) as beaconcount
+        FROM `akamai-mpulse-rumarchive.rumarchive.rumarchive_page_loads` 
+        WHERE {{TIMESERIES_DATES}}
+        GROUP BY DATE, DEVICETYPE
+        ORDER BY DATE ASC, DEVICETYPE ASC"
+}

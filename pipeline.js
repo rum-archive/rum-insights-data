@@ -1,4 +1,5 @@
 const fs = require('fs/promises');
+const fsSync = require('fs');
 const path = require('path');
 const {BigQuery} = require('@google-cloud/bigquery');
 
@@ -18,31 +19,48 @@ async function processResults( bigQueryResults ) {
             continue;
         }
 
+        const outputPath = "./data-output/" + query.filename + ".json";
+
+        let data = await fs.readFile( query.cachePath, "utf8");
+        data = JSON.parse(data.toString());
+
         try {
-            const metricName = query.extractmetric;
-            const outputPath = "./data-output/" + query.filename + ".json";
+            if ( query.processingtype === "metricPerDevice" || query.processingtype === "histogramPerDevice" )
+            {
+                const metricName = query.extractmetric;
 
-            let data = await fs.readFile( query.cachePath, "utf8");
-            data = JSON.parse(data.toString());
+                // filter out null-values by default. WARNING: impacts overall percentages!!
+                // null values are data that can't be attributed to the queried dimension (e.g., an unknown useragent, or a beacon with a missing visibilitystate value)
+                data = data.filter( point => point[metricName] !== null && point[metricName] !== "null" );
 
-            // filter out null-values by default. WARNING: impacts overall percentages!!
-            // null values are data that can't be attributed to the queried dimension (e.g., an unknown useragent, or a beacon with a missing visibilitystate value)
-            data = data.filter( point => point[metricName] !== null && point[metricName] !== "null" );
+                let processedData = [];
+                if ( query.processingtype === "metricPerDevice" ) {
+                    processedData = processing.processSingleMetricPerDevicetype( data, metricName );
+                }
+                else if ( query.processingtype === "histogramPerDevice" ) {
+                    processedData = processing.processHistogramPerDevicetype( data, metricName, query.extracthistogram );
+                }
 
-            let processedData = [];
-            if ( query.processingtype === "metric" ) {
-                processedData = processing.processRawBigquery( data, metricName );
+                // console.log( processedData );
+
+                await fs.writeFile( outputPath, JSON.stringify(processedData), "utf8" );
+
             }
-            else if ( query.processingtype === "histogram" ) {
-                processedData = processing.processHistogramBigquery( data, metricName, query.extracthistogram );
+            else if ( query.processingtype === "metricGlobal" ){
+                let processedData = [];
+                processedData = processing.processSingleMetricGlobal( data, query.extractmetric );
+
+                await fs.writeFile( outputPath, JSON.stringify(processedData), "utf8" );
+            }
+            else if ( query.processingtype === "CWVCountPerUseragent" ){
+                let processedData = [];
+                processedData = processing.processCWVperUseragent( data );
+
+                await fs.writeFile( outputPath, JSON.stringify(processedData), "utf8" );
             }
             else {
                 throw Error("processResults: unknown processingtype on this query: " + query.processingtype);
-            }
-
-            // console.log( processedData );
-
-            await fs.writeFile( outputPath, JSON.stringify(processedData), "utf8" );
+            }            
         }
         catch(e) {
             query.error = e;
@@ -60,6 +78,15 @@ async function runQueries( queries ) {
         try {
             query.cachePath = ""; // if error, this will remain empty for this query
             const cachePath = "./data-cache/" + query.filename + ".json";
+
+            if( fsSync.existsSync(cachePath) ) {
+                // for now, assume that if we have something in the data-cache for this query, it can be re-used
+                // if you want to have the query run again, remove or rename the file in the data-cache
+                // TODO: make this smarter by reading the file in datacache, look at the last date present, and then decide if it needs updating
+                console.log(`Note: Query ${query.filename} not executed in BigQuery because already in data-cache.`);
+                query.cachePath = cachePath;
+                continue;
+            }
 
             await runBigQuery( query.sql, cachePath, GLOBAL_DEBUG );
             query.cachePath = cachePath;
@@ -144,6 +171,8 @@ function getFullDateRange() {
     dates.push("2023-05-01");
     dates.push("2023-06-01");
     dates.push("2023-07-01");
+    dates.push("2023-08-01");
+    dates.push("2023-09-01");
 
     return dates;
 }
@@ -157,6 +186,10 @@ async function getQueries() {
     // example override: ["useragentfamily_devicetype.jsonl"]; // this would only execute this one query
     // let queryNames = ["useragentfamily_devicetype.jsonl"];
     // let queryNames = ["LCP_visibilitystate_devicetype.jsonl"];
+    // let queryNames = ["LCPCount_useragentfamily_desktop.jsonl"];
+    // let queryNames = ["LCPCount_useragentfamily_mobile.jsonl"];
+    // let queryNames = ["LCPCount_useragentfamily_desktop.jsonl", "LCPCount_useragentfamily_mobile.jsonl"];
+    // let queryNames = ["devicetype.jsonl", "os_devicetype.jsonl"];
     let queryNames = [];
 
     if( queryNames.length === 0 ){
@@ -173,8 +206,6 @@ async function getQueries() {
         allDates = [ lastDate ];
     }
 
-    // TODO: add logic to read cached bigquery results and determine the actual dates needed to get new data for (cut down on processing costs)
-
     // concatenate the dates to be used in the sql queries
     let allDatesString = "";
     for ( const [idx, date] of allDates.entries() ) {
@@ -190,7 +221,7 @@ async function getQueries() {
         {
             // required
             datetype: "timeseries" | "single",
-            processingtype: "metric" | "histogram",
+            processingtype: "metricGlobal" | "metricPerDevice" | "histogramPerDevice" | "CWVCountPerUseragent",
             extractmetric: string, // needed for both metric and histogram
             sql: multiline-string,
 
@@ -255,12 +286,20 @@ async function runPipeline() {
     }
 }
 
+async function runJustProcessorDEBUG(){
+
+    const queries = await getQueries();
+    queries[0].cachePath = "./data-cache/" + queries[0].filename + ".json";;
+    const processedResults = await processResults(queries);
+}
+
 function main() {
     
     GLOBAL_DEBUG = false;
     FORCE_SINGLE_DATE = false;
 
     runPipeline();
+    // runJustProcessorDEBUG(); // bypass the bigquery execution if we already have recent data in /data-cache
 }
 
 main(...process.argv.slice(2));
