@@ -1,7 +1,7 @@
 {
     "description": "Histogram of LCP per visibility state per device type for the last applicable date",
     "datetype": "single",
-    "processingtype": "histogram",
+    "processingtype": "histogramPerDevice",
     "extractmetric": "visibilitystate",
     "extracthistogram": "LCPHISTOGRAM",
     "sql": "

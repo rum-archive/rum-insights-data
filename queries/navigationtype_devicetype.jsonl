@@ -1,0 +1,16 @@
+{
+    "description": "Timeseries of the different navigation types per device type seen in the RUM Archive dataset",
+    "datetype": "timeseries",
+    "processingtype": "metricPerDevice",
+    "extractmetric": "navigationtype",
+    "sql": "
+        SELECT DATE as date, 
+        NAVIGATIONTYPE as navigationtype, 
+        DEVICETYPE as device, 
+        COUNT(*) as rowcount, 
+        SUM(BEACONS) as beaconcount 
+        FROM `akamai-mpulse-rumarchive.rumarchive.rumarchive_page_loads` 
+        WHERE {{TIMESERIES_DATES}}
+        GROUP BY DATE, DEVICETYPE, NAVIGATIONTYPE 
+        ORDER BY DATE ASC, DEVICETYPE ASC, NAVIGATIONTYPE ASC"
+}

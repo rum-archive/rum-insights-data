@@ -1,0 +1,16 @@
+{
+    "description": "Timeseries of the different visibility states per device type seen in the RUM Archive dataset",
+    "datetype": "timeseries",
+    "processingtype": "metricPerDevice",
+    "extractmetric": "visibilitystate",
+    "sql": "
+        SELECT DATE as date, 
+        VISIBILITYSTATE as visibilitystate, 
+        DEVICETYPE as device, 
+        COUNT(*) as rowcount, 
+        SUM(BEACONS) as beaconcount 
+        FROM `akamai-mpulse-rumarchive.rumarchive.rumarchive_page_loads` 
+        WHERE {{TIMESERIES_DATES}}
+        GROUP BY DATE, DEVICETYPE, VISIBILITYSTATE 
+        ORDER BY DATE ASC, DEVICETYPE ASC, VISIBILITYSTATE ASC"
+}
