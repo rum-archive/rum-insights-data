@@ -173,6 +173,9 @@ function getFullDateRange() {
     dates.push("2023-07-01");
     dates.push("2023-08-01");
     dates.push("2023-09-01");
+    dates.push("2023-10-01");
+    dates.push("2023-11-01");
+    dates.push("2023-12-01");
 
     return dates;
 }
