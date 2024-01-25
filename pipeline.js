@@ -46,6 +46,12 @@ async function processResults( bigQueryResults ) {
                 await fs.writeFile( outputPath, JSON.stringify(processedData), "utf8" );
 
             }
+            else if ( query.processingtype === "groupedMetricPerDevice" ){
+                let processedData = [];
+                processedData = processing.processGroupedMetricPerDevicetype( data, query.extractmetric, query.groupby );
+
+                await fs.writeFile( outputPath, JSON.stringify(processedData), "utf8" );
+            }
             else if ( query.processingtype === "metricGlobal" ){
                 let processedData = [];
                 processedData = processing.processSingleMetricGlobal( data, query.extractmetric );

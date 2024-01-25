@@ -1,0 +1,15 @@
+{
+    "description": "Timeseries of the different HTTP protocol versions seen in the RUM Archive dataset",
+    "datetype": "timeseries",
+    "processingtype": "metricGlobal",
+    "extractmetric": "protocol",
+    "sql": "
+        SELECT DATE as date,
+        PROTOCOL as protocol, 
+        COUNT(*) as rowcount, 
+        SUM(BEACONS) as beaconcount
+        FROM `akamai-mpulse-rumarchive.rumarchive.rumarchive_page_loads` 
+        WHERE {{TIMESERIES_DATES}}
+        GROUP BY DATE, PROTOCOL
+        ORDER BY DATE ASC, PROTOCOL ASC"
+}

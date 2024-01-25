@@ -42,14 +42,18 @@ function processSingleMetricGlobal(rows, metricFieldName){
         datapoint.date = row.date.value.replaceAll("-", "_"); // "2022-12-01" to "2022_12_01"
 
         const dateTotalBeaconCount = dateCounts.get( row.date.value );
-        datapoint.percent = ((row.beaconcount / dateTotalBeaconCount) * 100).toFixed(1);
+        let percent = ((row.beaconcount / dateTotalBeaconCount) * 100);
+        datapoint.percent = percent.toFixed(1);
 
         datapoint[metricFieldName] = row[metricFieldName]; // e.g., .device
 
         // highcharts uses raw timestamps, so pre-calculate them
         datapoint.timestamp = "" + (new Date( row.date.value ).getTime());
-
-        output.push( datapoint );
+        
+        if ( percent > 0.1 ) {
+            // skip entries that are 0.0 percent (especially in high-cardinality queries, these often account for many megabytes of output data)
+            output.push( datapoint );
+        }
     }
 
     return output;
@@ -164,14 +168,147 @@ function processSingleMetricPerDevicetype(rows, metricFieldName) {
         datapoint.date = row.date.value.replaceAll("-", "_"); // "2022-12-01" to "2022_12_01"
 
         const deviceCount = dateCounts.get( row.date.value ).get( row.device );
-        datapoint.percent = ((row.beaconcount / deviceCount.beaconCount) * 100).toFixed(1);
+        const percent = ((row.beaconcount / deviceCount.beaconCount) * 100);
+        datapoint.percent = percent.toFixed(1);
 
         datapoint[metricFieldName] = row[metricFieldName]; // e.g., .protocol, .useragent, etc.
 
         // highcharts uses raw timestamps, so pre-calculate them
         datapoint.timestamp = "" + (new Date( row.date.value ).getTime());
 
-        output.push( datapoint );
+        if( percent > 0.1 ) {
+            // skip entries that are 0.0 percent (especially in high-cardinality queries, these often account for many megabytes of output data)
+            output.push( datapoint );
+        }
+    }
+
+    return output;
+}
+
+
+function processGroupedMetricPerDevicetype(rows, metricFieldName, groupbyFieldName) {
+    /*
+        This is similar to processSingleMetricPerDevicetype, but the metrics are grouped in another dimension
+        For example, SingleMetric would be
+            deviceModel per deviceType
+        while GroupedMetric would be
+            deviceModel per country per deviceType
+        Where the results are again grouped by country.
+
+        Incoming data are rows of raw bigquery results.
+        We assume the rows are ordered by ASC date!
+        For example:
+            {
+                date: { value: '2022-12-01' },
+                model: 'Apple iPhone',
+                country: 'US',
+                device: 'Desktop',
+                rowcount: 1,
+                beaconcount: 9
+            },
+
+        We need to do multiple things:
+        1. Group by extra dimension (groupbyFieldName) + devicetype + date to find out the toal row and beacon counts of that dimension+device+date 
+            --> (so we can have a percentage for each individual value for that date, since not all dates have an equal amount of beacons)
+        2. Transform the output to the expected format (same as the one HTTPArchive uses)
+            (see processSingleMetricPerDevicetype for more details on that)
+    */
+
+    // TODO: this could benefit from a more generic implementation allow any sequence of groupings (i.e., treating date and devicetype as a normal grouping as well)
+    //       For now, I decided to keep them split for clarity and to wait until clear patterns emerge before deciding to refactor
+
+    // Note: conceptually, I could use subsequent .filter() calls to get only the individual sets I need, but this would mean iterating over the data multiple times and creating new arrays each time
+    //  the approach below is more annoying to program, but should be more efficient (looping over data just once to setup the main data structure, then once to transform to output format)
+
+
+    // 1. Aggregate counts per groupbyFieldName + device + date so we can calculate percentages later 
+    //      the output is grouped by date first, so keep that structure here  (so  dateCount = Map<DATESTRING, Map<DEVICESTRING, MAP<groupbyFieldname, Counts>>>)
+    const dateCounts = new Map();
+
+    for( const row of rows ) {
+        const date = row.date.value;
+        const device = row.device;
+        const groupbyDimension = row[ groupbyFieldName ]; // e.g., "country"
+
+        let dateEntry = dateCounts.get( date );
+        if ( !dateEntry ){
+            dateEntry = new Map();
+            dateCounts.set( date, dateEntry );
+        }
+
+        let deviceEntry = dateEntry.get( device );
+        if ( !deviceEntry ) {
+            deviceEntry = new Map();
+            dateEntry.set( device, deviceEntry );
+        }
+
+        let groupbyEntry = deviceEntry.get( groupbyDimension );
+        if ( !groupbyEntry ) {
+            groupbyEntry = {
+                rowCount: row.rowcount,
+                beaconCount: row.beaconcount
+            };
+            deviceEntry.set( groupbyDimension, groupbyEntry );
+        }
+        else {
+            groupbyEntry.rowCount += row.rowcount;
+            groupbyEntry.beaconCount += row.beaconcount;
+        }
+    }
+
+    // 2. Transform to output format + calculate percentages
+    const output = [];
+    for( const row of rows ) {
+        /*
+        From
+            {
+                date: { value: '2022-12-01' },
+                useragent: 'ev-crawler',
+                device: 'Desktop',
+                rowcount: 1,
+                beaconcount: 9
+            },
+        To
+            {
+                "useragent": "ev-crawler",
+                "client": "desktop",
+                "date": "2020_01_01",
+                "percent": "0.0"
+            },
+        */
+
+        const datapoint = {};
+        
+        if ( row.device )
+            datapoint.client = row.device.toLowerCase();
+        else
+            datapoint.client = "unknown";
+
+        const groupbyValue = row[ groupbyFieldName ];
+
+        if ( groupbyValue ) {
+            datapoint[ groupbyFieldName.toLowerCase() ] = groupbyValue;
+        }
+        else {
+            datapoint[ groupbyFieldName.toLowerCase() ] = "unknown";
+        }
+
+        datapoint.date = row.date.value.replaceAll("-", "_"); // "2022-12-01" to "2022_12_01"
+
+        datapoint[metricFieldName] = row[metricFieldName]; // e.g., .protocol, .useragent, .model, etc.
+
+        const dimensionCount = dateCounts.get( row.date.value ).get( row.device ).get( groupbyValue );
+
+        const percent = ((row.beaconcount / dimensionCount.beaconCount) * 100);
+        datapoint.percent = percent.toFixed(1);
+
+        // highcharts uses raw timestamps, so pre-calculate them
+        datapoint.timestamp = "" + (new Date( row.date.value ).getTime());
+
+        if( percent > 0.1 ) {
+            // skip entries that are 0.0 percent (especially in high-cardinality queries, these often account for many megabytes of output data)
+            output.push( datapoint );
+        }
     }
 
     return output;
@@ -429,6 +566,7 @@ function processCWVperUseragent(data) {
 module.exports = {
     processSingleMetricGlobal,
     processSingleMetricPerDevicetype,
+    processGroupedMetricPerDevicetype,
     processHistogramPerDevicetype,
     processCWVperUseragent
 }
