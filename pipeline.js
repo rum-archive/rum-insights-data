@@ -93,6 +93,9 @@ async function runQueries( queries ) {
                 query.cachePath = cachePath;
                 continue;
             }
+            else {
+                console.log(`Executing Query ${query.filename} via BigQuery`);
+            }
 
             await runBigQuery( query.sql, cachePath, GLOBAL_DEBUG );
             query.cachePath = cachePath;
@@ -216,12 +219,14 @@ async function getQueries() {
     }
 
     // concatenate the dates to be used in the sql queries
-    let allDatesString = "";
+    let allDatesString = "(";
     for ( const [idx, date] of allDates.entries() ) {
         allDatesString += "DATE = \"" + date + "\"";
         if ( idx != allDates.length - 1 )
             allDatesString += " OR ";
     }
+    allDatesString += ")";
+    
     const lastDateString = "DATE = \"" + lastDate + "\"";
 
     // run the actual query definitions from filesystem
