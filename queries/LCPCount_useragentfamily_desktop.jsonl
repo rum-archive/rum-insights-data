@@ -1,6 +1,6 @@
 {
     "description": "Beacon counts per useragentfamily for entries with an acceptable LCPCount",
-    "datetype": "single",
+    "datetype": "last_day",
     "processingtype": "CWVCountPerUseragent",
     "comments": "note: topLevelBeacons here should not be used... gives weird results. Use BeaconsWithCWV instead!",
     "sql": "
@@ -14,7 +14,7 @@
             WHERE {{LAST_DATE}} AND BEACONTYPE = \"page view\" AND NAVIGATIONTYPE = \"navigate\" AND DEVICETYPE = \"Desktop\" AND USERAGENTFAMILY IS NOT NULL AND USERAGENTFAMILY != \"null\"
         ) as TotalBeacons 
         FROM `akamai-mpulse-rumarchive.rumarchive.rumarchive_page_loads` as t1 
-        WHERE {{LAST_DATE}} AND LCPAVG > 0 AND (LCPCOUNT > BEACONS * 0.02) AND BEACONTYPE = \"page view\" AND NAVIGATIONTYPE = \"navigate\" AND DEVICETYPE = \"Desktop\" 
+        WHERE {{DATES}} AND LCPAVG > 0 AND (LCPCOUNT > BEACONS * 0.02) AND BEACONTYPE = \"page view\" AND NAVIGATIONTYPE = \"navigate\" AND DEVICETYPE = \"Desktop\" 
         GROUP BY DEVICETYPE, DATE, USERAGENTFAMILY 
         ORDER BY TotalBeacons DESC
         "

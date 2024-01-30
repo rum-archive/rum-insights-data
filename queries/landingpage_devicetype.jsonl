@@ -1,6 +1,6 @@
 {
     "description": "Timeseries of the whether or not a beacon was for the landingpage (1st page in a session) or not in the RUM Archive dataset",
-    "datetype": "timeseries",
+    "datetype": "first_days",
     "processingtype": "metricPerDevice",
     "extractmetric": "landingpage",
     "sql": "
@@ -10,7 +10,7 @@
         COUNT(*) as rowcount, 
         SUM(BEACONS) as beaconcount 
         FROM `akamai-mpulse-rumarchive.rumarchive.rumarchive_page_loads` 
-        WHERE {{TIMESERIES_DATES}}
+        WHERE {{DATES}}
         GROUP BY DATE, DEVICETYPE, LANDINGPAGE 
         ORDER BY DATE ASC, DEVICETYPE ASC, LANDINGPAGE ASC"
 }

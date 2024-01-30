@@ -1,6 +1,6 @@
 {
     "description": "Timeseries of the different versions per user agent per device type, ordered by occurrence seen in the RUM Archive dataset",
-    "datetype": "timeseries",
+    "datetype": "first_and_third_mondays",
     "processingtype": "groupedMetricPerDevice",
     "extractmetric": "version",
     "groupby": "family",
@@ -13,7 +13,7 @@
         COUNT(*) as rowcount, 
         SUM(BEACONS) as beaconcount
         FROM `akamai-mpulse-rumarchive.rumarchive.rumarchive_page_loads` 
-        WHERE DEVICETYPE IS NOT NULL and USERAGENTFAMILY IS NOT NULL AND USERAGENTVERSION IS NOT NULL AND {{TIMESERIES_DATES}}
+        WHERE DEVICETYPE IS NOT NULL and USERAGENTFAMILY IS NOT NULL AND USERAGENTVERSION IS NOT NULL AND {{DATES}}
             AND USERAGENTFAMILY in ('Chrome', 'Chrome Mobile', 'Chrome Mobile WebView', 'Chrome Mobile iOS', 'Safari', 'Mobile Safari', 'Mobile Safari UI/WKWebView', 'Edge', 'Facebook', 'Firefox', 'Firefox Mobile', 'Opera', 'Opera Mini', 'Samsung Internet', 'Instagram')
         GROUP BY DATE, DEVICETYPE, USERAGENTFAMILY, USERAGENTVERSION 
         ORDER BY DATE ASC, DEVICETYPE ASC, USERAGENTFAMILY ASC, beaconcount DESC"

@@ -1,6 +1,6 @@
 {
     "description": "Timeseries of the different device models per country per device type, ordered by occurrence seen in the RUM Archive dataset",
-    "datetype": "single",
+    "datetype": "last_day",
     "processingtype": "groupedMetricPerDevice",
     "extractmetric": "model",
     "groupby": "country",
@@ -13,7 +13,7 @@
         COUNT(*) as rowcount, 
         SUM(BEACONS) as beaconcount
         FROM `akamai-mpulse-rumarchive.rumarchive.rumarchive_page_loads` 
-        WHERE DEVICETYPE IS NOT NULL and COUNTRY IS NOT NULL AND DEVICEMODEL IS NOT NULL AND {{LAST_DATE}}
+        WHERE DEVICETYPE IS NOT NULL and COUNTRY IS NOT NULL AND DEVICEMODEL IS NOT NULL AND {{DATES}}
         GROUP BY DATE, DEVICETYPE, COUNTRY, DEVICEMODEL 
         ORDER BY DATE ASC, DEVICETYPE ASC, COUNTRY ASC, beaconcount DESC"
 }
