@@ -1,6 +1,6 @@
 {
     "description": "Timeseries of the whether or not a beacon was for the landingpage (1st page in a session) or not in the RUM Archive dataset",
-    "datetype": "first_days",
+    "datetype": "first_tuesdays",
     "processingtype": "metricPerDevice",
     "extractmetric": "landingpage",
     "sql": "

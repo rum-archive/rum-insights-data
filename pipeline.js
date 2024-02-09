@@ -4,6 +4,7 @@ const path = require('path');
 const {BigQuery} = require('@google-cloud/bigquery');
 
 const processing = require("./src/processing");
+const dates = require("./src/dates");
 
 'use strict';
 
@@ -151,135 +152,6 @@ async function runBigQuery(querySQLString, outputPath, dryRun) {
     }
 }
 
-// dateType:
-// recent_day: uses a single date from the last loaded month of data (first monday). e.g., (DATE = '2023-12-31')
-// recent_month: uses the last month of loaded data e.g., (DATE BETWEEN '2023-12-01' AND '2023-12-31')
-// first_days: list of all first days in supported months since October 2021 (i.e., 202x-yy-01 for all months present in the archive)
-// first_mondays: list of all first mondays in supported months since September 2022
-// first_and_third_mondays: list of all first and third mondays in supported months since September 2022 
-
-// NOTE: this function is intended to be updated every time the RUMArchive is refreshed with new data
-// TODO: get this from external config files so we don't have to update the code every time? 
-function getDateQuery( dateType ) {
-    // TODO: should not just take the first (01) of each month 
-    // but something like "the first monday of each month" to get more consistent results
-
-    // from october 2021 to august 2022, we only have the 1st of each month
-    // from september 2022 and after, we have each day
-
-    function toQueryString( allDates ) {
-        let allDatesString = "(";
-
-        for ( const [idx, date] of allDates.entries() ) {
-            allDatesString += "DATE = \"" + date + "\"";
-            if ( idx != allDates.length - 1 )
-                allDatesString += " OR ";
-        }
-        allDatesString += ")";
-
-        return allDatesString;
-    }
-
-    if ( dateType === "recent_day" ) {
-        return toQueryString(["2023-12-01"]);
-    }
-    else if ( dateType === "recent_month" ) {
-        return "(DATE BETWEEN '2023-12-01' AND '2023-12-31')";
-    }
-    else if ( dateType === "first_days" ) {
-        const dates = [];
-        dates.push("2021-10-01");
-        dates.push("2021-11-01");
-        dates.push("2021-12-01");
-        dates.push("2022-01-01");
-        dates.push("2022-02-01");
-        dates.push("2022-03-01");
-        dates.push("2022-04-01");
-        dates.push("2022-05-01");
-        dates.push("2022-06-01");
-        dates.push("2022-07-01");
-        dates.push("2022-08-01");
-        dates.push("2022-09-01"); // from here on we can choose any date in the month. Keep it on 1 for now 
-        dates.push("2022-10-01");
-        dates.push("2022-11-01");
-        dates.push("2022-12-01");
-        dates.push("2023-01-01");
-        dates.push("2023-02-01");
-        dates.push("2023-03-01");
-        dates.push("2023-04-01");
-        dates.push("2023-05-01");
-        dates.push("2023-06-01");
-        dates.push("2023-07-01");
-        dates.push("2023-08-01");
-        dates.push("2023-09-01");
-        dates.push("2023-10-01");
-        dates.push("2023-11-01");
-        dates.push("2023-12-01");
-
-        return toQueryString(dates);
-    }
-    else if ( dateType === "first_mondays" ) {
-        const dates = [];
-        dates.push("2022-09-05");
-        dates.push("2022-10-03");
-        dates.push("2022-11-07");
-        dates.push("2022-12-05");
-        dates.push("2023-01-02");
-        dates.push("2023-02-06");
-        dates.push("2023-03-06");
-        dates.push("2023-04-03");
-        dates.push("2023-05-01");
-        dates.push("2023-06-05");
-        dates.push("2023-07-03");
-        dates.push("2023-08-07");
-        dates.push("2023-09-04");
-        dates.push("2023-10-02");
-        dates.push("2023-11-06");
-        dates.push("2023-12-04");
-
-        return toQueryString(dates);
-    }
-    else if ( dateType === "first_and_third_mondays" ) {
-        const dates = [];
-        dates.push("2022-09-05");
-        dates.push("2022-09-19");
-        dates.push("2022-10-03");
-        dates.push("2022-10-17");
-        dates.push("2022-11-07");
-        dates.push("2022-11-21");
-        dates.push("2022-12-05");
-        dates.push("2022-12-19");
-        dates.push("2023-01-02");
-        dates.push("2023-01-16");
-        dates.push("2023-02-06");
-        dates.push("2023-02-20");
-        dates.push("2023-03-06");
-        dates.push("2023-03-20");
-        dates.push("2023-04-03");
-        dates.push("2023-04-17");
-        dates.push("2023-05-01");
-        dates.push("2023-05-15");
-        dates.push("2023-06-05");
-        dates.push("2023-06-19");
-        dates.push("2023-07-03");
-        dates.push("2023-07-17");
-        dates.push("2023-08-07");
-        dates.push("2023-08-21");
-        dates.push("2023-09-04");
-        dates.push("2023-09-18");
-        dates.push("2023-10-02");
-        dates.push("2023-10-16");
-        dates.push("2023-11-06");
-        dates.push("2023-11-20");
-        dates.push("2023-12-04");
-        dates.push("2023-12-18");
-
-        return toQueryString(dates);
-    }
-
-    return dates;
-}
-
 async function getQueries() {
     const QUERYDIR = "./queries";
 
@@ -304,20 +176,21 @@ async function getQueries() {
     }
 
     // TODO: update queries to actually use 
-    let lastDateString = getDateQuery("recent_day");
+    let lastDateString = dates.getDateQuery("recent_day");
 
-    let allDatesString = getDateQuery("first_days");
+    let allDatesString = dates.getDateQuery("first_days");
     if( FORCE_SINGLE_DATE )
         allDatesString = lastDateString;
-    let firstMondaysDatesString = getDateQuery("first_mondays");
-    let extendedDatesString = getDateQuery("first_and_third_mondays");
+
+    let firstTuesdaysDatesString = dates.getDateQuery("first_tuesdays");
+    let extendedDatesString = dates.getDateQuery("first_and_third_tuesdays");
 
     // run the actual query definitions from filesystem
     // expected JSON structs:
     /*
         {
             // required
-            datetype: "recent_day" | "recent_month" | "first_days" | "first_mondays" | "first_and_third_mondays",
+            datetype: "recent_day" | "recent_month" | "first_days" | "first_tuesdays" | "first_and_third_tuesdays",
             processingtype: "metricGlobal" | "metricPerDevice" | "histogramPerDevice" | "CWVCountPerUseragent",
             extractmetric: string, // needed for both metric and histogram
             sql: multiline-string,
@@ -344,12 +217,16 @@ async function getQueries() {
         // TODO: properly support all date types
         if( queryContent.datetype === "first_days" )
             queryContent.sql = queryContent.sql.replaceAll("{{DATES}}", allDatesString);
-        if( queryContent.datetype === "first_mondays" )
-            queryContent.sql = queryContent.sql.replaceAll("{{DATES}}", firstMondaysDatesString);
-        else if ( queryContent.datetype === "first_and_third_mondays" )
+        else if( queryContent.datetype === "first_tuesdays" )
+            queryContent.sql = queryContent.sql.replaceAll("{{DATES}}", firstTuesdaysDatesString);
+        else if ( queryContent.datetype === "first_and_third_tuesdays" )
             queryContent.sql = queryContent.sql.replaceAll("{{DATES}}", extendedDatesString);
         else if ( queryContent.datetype === "last_day" )
             queryContent.sql = queryContent.sql.replaceAll("{{DATES}}", lastDateString);
+        else {
+            console.error("Unsupported dateType... aborting query ", queryContent.datetype, queryName);
+            continue;
+        }
 
         if ( !queryContent.filename ) // allow manual overrides in the input file
             queryContent.filename = path.parse(queryName).name; // filename without the extension, used later in the pipeline for storing results

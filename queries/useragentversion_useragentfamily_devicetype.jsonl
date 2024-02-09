@@ -1,6 +1,6 @@
 {
     "description": "Timeseries of the different versions per user agent per device type, ordered by occurrence seen in the RUM Archive dataset",
-    "datetype": "first_and_third_mondays",
+    "datetype": "first_and_third_tuesdays",
     "processingtype": "groupedMetricPerDevice",
     "extractmetric": "version",
     "groupby": "family",

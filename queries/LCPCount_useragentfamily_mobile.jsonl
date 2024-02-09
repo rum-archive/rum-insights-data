@@ -7,11 +7,11 @@
         SELECT DEVICETYPE as device, DATE as date, USERAGENTFAMILY as useragent, SUM(LCPCOUNT) as BeaconsWithCWV, COUNT(*) as rowcount, SUM(BEACONS) as topLevelBeacons,
         (SELECT SUM(BEACONS)
             FROM `akamai-mpulse-rumarchive.rumarchive.rumarchive_page_loads`
-            WHERE {{LAST_DATE}} AND BEACONTYPE = \"page view\" AND NAVIGATIONTYPE = \"navigate\" AND DEVICETYPE = \"Mobile\" AND USERAGENTFAMILY = t1.USERAGENTFAMILY
+            WHERE {{DATES}} AND BEACONTYPE = \"page view\" AND NAVIGATIONTYPE = \"navigate\" AND DEVICETYPE = \"Mobile\" AND USERAGENTFAMILY = t1.USERAGENTFAMILY
         ) as AllUserAgentBeacons,
         (SELECT SUM(BEACONS)
             FROM `akamai-mpulse-rumarchive.rumarchive.rumarchive_page_loads`
-            WHERE {{LAST_DATE}} AND BEACONTYPE = \"page view\" AND NAVIGATIONTYPE = \"navigate\" AND DEVICETYPE = \"Mobile\" AND USERAGENTFAMILY IS NOT NULL AND USERAGENTFAMILY != \"null\"
+            WHERE {{DATES}} AND BEACONTYPE = \"page view\" AND NAVIGATIONTYPE = \"navigate\" AND DEVICETYPE = \"Mobile\" AND USERAGENTFAMILY IS NOT NULL AND USERAGENTFAMILY != \"null\"
         ) as TotalBeacons 
         FROM `akamai-mpulse-rumarchive.rumarchive.rumarchive_page_loads` as t1 
         WHERE {{DATES}} AND LCPAVG > 0 AND (LCPCOUNT > BEACONS * 0.02) AND BEACONTYPE = \"page view\" AND NAVIGATIONTYPE = \"navigate\" AND DEVICETYPE = \"Mobile\" 

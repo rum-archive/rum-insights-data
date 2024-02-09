@@ -1,6 +1,6 @@
 {
     "description": "Timeseries of the different OSes per device type seen in the RUM Archive dataset",
-    "datetype": "first_days",
+    "datetype": "first_tuesdays",
     "processingtype": "metricPerDevice",
     "extractmetric": "os",
     "sql": "
