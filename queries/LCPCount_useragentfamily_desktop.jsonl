@@ -1,6 +1,6 @@
 {
     "description": "Beacon counts per useragentfamily for entries with an acceptable LCPCount",
-    "datetype": "last_day",
+    "datetype": "recent_day",
     "processingtype": "CWVCountPerUseragent",
     "comments": "note: topLevelBeacons here should not be used... gives weird results. Use BeaconsWithCWV instead!",
     "sql": "

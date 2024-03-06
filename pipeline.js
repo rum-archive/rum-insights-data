@@ -12,6 +12,8 @@ const dates = require("./src/dates");
 let GLOBAL_DEBUG = false;
 // set to true to force each query to run for just a single date (cheaper/less data)
 let FORCE_SINGLE_DATE = false;
+// determines how we use the cached values in data-cache 
+let MERGE_CACHE_INSTEAD_OF_OVERRIDE = true; // true is "smart", default
 
 async function processResults( bigQueryResults ) {
     for ( const query of bigQueryResults ) {
@@ -86,19 +88,22 @@ async function runQueries( queries ) {
             query.cachePath = ""; // if error, this will remain empty for this query
             const cachePath = "./data-cache/" + query.filename + ".json";
 
-            if( fsSync.existsSync(cachePath) ) {
-                // for now, assume that if we have something in the data-cache for this query, it can be re-used
+            // we have 2 modes of operation driven by MERGE_CACHE_INSTEAD_OF_OVERRIDE:
+            // - naive: MERGE_CACHE_INSTEAD_OF_OVERRIDE = false : assume if there's something in the data-cache for a query, that is fully up to date and can just be re-used. Delete the file manually to re-run full query.
+            // - smart: MERGE_CACHE_INSTEAD_OF_OVERRIDE = true : assume data-cache is outdated, determine what new data we need (which dates), then merge with what was already on disk
+            // Note: some of the "smart" checks are done before this, so if we get here, we already know there is an update needed
+            if( !MERGE_CACHE_INSTEAD_OF_OVERRIDE && fsSync.existsSync(cachePath) ) {
+                // naive mode: assume that if we have something in the data-cache for this query, it can be re-used
                 // if you want to have the query run again, remove or rename the file in the data-cache
-                // TODO: make this smarter by reading the file in datacache, look at the last date present, and then decide if it needs updating
-                console.log(`Note: Query ${query.filename} not executed in BigQuery because already in data-cache.`);
+                console.log(`runQueries: Note: Query ${query.filename} not executed in BigQuery because already in data-cache.`);
                 query.cachePath = cachePath;
                 continue;
             }
             else {
-                console.log(`Executing Query ${query.filename} via BigQuery`);
+                console.log(`runQueries: Executing Query ${query.filename} via BigQuery`);
             }
 
-            await runBigQuery( query.sql, cachePath, GLOBAL_DEBUG );
+            await runBigQuery( query, cachePath, GLOBAL_DEBUG );
             query.cachePath = cachePath;
         }
         catch(e) {
@@ -110,14 +115,14 @@ async function runQueries( queries ) {
     return queries; // we just keep passing around the same array, as we update properties of the query objects with new info for the next stage
 }
 
-async function runBigQuery(querySQLString, outputPath, dryRun) {
+async function runBigQuery(query, outputPath, dryRun) {
 
     // From: https://github.com/googleapis/nodejs-bigquery/blob/main/samples/query.js
     const bigquery = new BigQuery();
 
     // For all options, see https://cloud.google.com/bigquery/docs/reference/rest/v2/jobs/query
     const options = {
-        query: querySQLString,
+        query: query.sql,
         //   // Location must match that of the dataset(s) referenced in the query.
         //   location: 'US',
         dryRun: dryRun,
@@ -139,15 +144,23 @@ async function runBigQuery(querySQLString, outputPath, dryRun) {
         throw Error("runBigQuery: DryRun enabled: no actual query executed");
     }
     else {
-        const [rows] = await job.getQueryResults();
+        let [rows] = await job.getQueryResults();
 
-        // console.log('Rows:');
-        // rows.forEach(row => console.log(row));
+        // only merge if we're actually doing multiple days
+        // if the query is only for a recent day, we always want to override
+        if ( query.datetype !== "recent_day" && MERGE_CACHE_INSTEAD_OF_OVERRIDE ) {
+            // "smart" mode: need to merge with existing cache
+            if( fsSync.existsSync(outputPath) ) {
+                const localDataRaw = await fs.readFile( outputPath, "utf8" );
+                const cachedData = JSON.parse( localDataRaw );
 
-        // console.log( JSON.stringify(rows, null, 4) );
-        // console.log( JSON.stringify(rows) );
+                console.log("runBigQuery: merging new results with cached results", outputPath, cachedData.length, rows.length);
 
-        // this will overwrite by default (no append)
+                rows = [...cachedData, ...rows];
+            }
+            // else: probably new query, nothing cached yet, so nothing to merge
+        }
+        
         await fs.writeFile( outputPath, JSON.stringify(rows), "utf8" );
     }
 }
@@ -174,16 +187,6 @@ async function getQueries() {
             throw Error("getQueries: no queries found to execute, aborting...");
         }
     }
-
-    // TODO: update queries to actually use 
-    let lastDateString = dates.getDateQuery("recent_day");
-
-    let allDatesString = dates.getDateQuery("first_days");
-    if( FORCE_SINGLE_DATE )
-        allDatesString = lastDateString;
-
-    let firstTuesdaysDatesString = dates.getDateQuery("first_tuesdays");
-    let extendedDatesString = dates.getDateQuery("first_and_third_tuesdays");
 
     // run the actual query definitions from filesystem
     // expected JSON structs:
@@ -214,22 +217,39 @@ async function getQueries() {
 
         const queryContent = JSON.parse(queryContentRaw);
 
-        // TODO: properly support all date types
-        if( queryContent.datetype === "first_days" )
-            queryContent.sql = queryContent.sql.replaceAll("{{DATES}}", allDatesString);
-        else if( queryContent.datetype === "first_tuesdays" )
-            queryContent.sql = queryContent.sql.replaceAll("{{DATES}}", firstTuesdaysDatesString);
-        else if ( queryContent.datetype === "first_and_third_tuesdays" )
-            queryContent.sql = queryContent.sql.replaceAll("{{DATES}}", extendedDatesString);
-        else if ( queryContent.datetype === "last_day" )
-            queryContent.sql = queryContent.sql.replaceAll("{{DATES}}", lastDateString);
-        else {
-            console.error("Unsupported dateType... aborting query ", queryContent.datetype, queryName);
+        if ( !queryContent.filename ) // allow manual overrides in the input file
+            queryContent.filename = path.parse(queryName).name; // filename without the extension, used later in the pipeline for storing results
+
+        // we want to only run the queries for the data we actually need (or we'd use too much BigQuery quota)
+        // so, we read the already cached data in data-cache and see which dates we already have
+        // we then only keep the dates that we don't have in cache yet, and only query for those
+        let cachedData = [];
+        const cachePath = "./data-cache/" + queryContent.filename + ".json";
+
+        if( fsSync.existsSync(cachePath) ) {
+            const localDataRaw = await fs.readFile( cachePath, "utf8" );
+            cachedData = JSON.parse(localDataRaw);
+        }
+
+        let dateType = queryContent.datetype;
+        if( FORCE_SINGLE_DATE )
+            dateType = "recent_day";
+
+        let dateString = "";
+        try {
+            dateString = dates.getDateQuery(dateType, cachedData); 
+        }
+        catch(err) {
+            console.error("getQueries: unsupported dateType... aborting query ", queryName, err);
             continue;
         }
 
-        if ( !queryContent.filename ) // allow manual overrides in the input file
-            queryContent.filename = path.parse(queryName).name; // filename without the extension, used later in the pipeline for storing results
+        if ( dateString === "" ){
+            console.log("getQueries: query is already up to date; not executing again.", queryName);
+            continue;
+        }
+
+        queryContent.sql = queryContent.sql.replaceAll("{{DATES}}", dateString);
 
         output.push( queryContent );
 
@@ -276,6 +296,7 @@ function main() {
     
     GLOBAL_DEBUG = false;
     FORCE_SINGLE_DATE = false;
+    MERGE_CACHE_INSTEAD_OF_OVERRIDE = true;
 
     runPipeline();
     // runJustProcessorDEBUG(); // bypass the bigquery execution if we already have recent data in /data-cache

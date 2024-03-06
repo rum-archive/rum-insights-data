@@ -1,6 +1,6 @@
 {
     "description": "Timeseries of the different countries per device type, ordered by occurrence seen in the RUM Archive dataset",
-    "datetype": "first_days",
+    "datetype": "first_tuesdays",
     "processingtype": "metricPerDevice",
     "extractmetric": "country",
     "sql": "

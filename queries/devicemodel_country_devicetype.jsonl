@@ -1,6 +1,6 @@
 {
     "description": "Timeseries of the different device models per country per device type, ordered by occurrence seen in the RUM Archive dataset",
-    "datetype": "last_day",
+    "datetype": "recent_day",
     "processingtype": "groupedMetricPerDevice",
     "extractmetric": "model",
     "groupby": "country",
