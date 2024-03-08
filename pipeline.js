@@ -88,11 +88,17 @@ async function runQueries( queries ) {
             query.cachePath = ""; // if error, this will remain empty for this query
             const cachePath = "./data-cache/" + query.filename + ".json";
 
-            // we have 2 modes of operation driven by MERGE_CACHE_INSTEAD_OF_OVERRIDE:
-            // - naive: MERGE_CACHE_INSTEAD_OF_OVERRIDE = false : assume if there's something in the data-cache for a query, that is fully up to date and can just be re-used. Delete the file manually to re-run full query.
-            // - smart: MERGE_CACHE_INSTEAD_OF_OVERRIDE = true : assume data-cache is outdated, determine what new data we need (which dates), then merge with what was already on disk
-            // Note: some of the "smart" checks are done before this, so if we get here, we already know there is an update needed
-            if( !MERGE_CACHE_INSTEAD_OF_OVERRIDE && fsSync.existsSync(cachePath) ) {
+            if ( query.forceSkipBigQuery === true ){
+                console.log("runQueries: query is already up to date; not executing in BigQuery again.", query.filename);
+                query.cachePath = cachePath;
+                continue;
+            }
+            else if( !MERGE_CACHE_INSTEAD_OF_OVERRIDE && fsSync.existsSync(cachePath) ) {
+                // we have 2 modes of operation driven by MERGE_CACHE_INSTEAD_OF_OVERRIDE:
+                // - naive: MERGE_CACHE_INSTEAD_OF_OVERRIDE = false : assume if there's something in the data-cache for a query, that is fully up to date and can just be re-used. Delete the file manually to re-run full query.
+                // - smart: MERGE_CACHE_INSTEAD_OF_OVERRIDE = true : assume data-cache is outdated, determine what new data we need (which dates), then merge with what was already on disk
+                // Note: some of the "smart" checks are done before this, so if we get here, we already know there is an update needed
+
                 // naive mode: assume that if we have something in the data-cache for this query, it can be re-used
                 // if you want to have the query run again, remove or rename the file in the data-cache
                 console.log(`runQueries: Note: Query ${query.filename} not executed in BigQuery because already in data-cache.`);
@@ -245,15 +251,18 @@ async function getQueries() {
         }
 
         if ( dateString === "" ){
-            console.log("getQueries: query is already up to date; not executing again.", queryName);
-            continue;
+            // query is already fully up to date in the local cache; no need to fetch new data
+            // we however only skip bigQuery, since we might have changed some of the processing logic, 
+            // and we want to keep running that in the pipeline
+            queryContent.forceSkipBigQuery = true;
         }
 
         queryContent.sql = queryContent.sql.replaceAll("{{DATES}}", dateString);
 
         output.push( queryContent );
 
-        console.log("getQueries:queryContent:", queryName, queryContent);
+        // console.log("getQueries:queryContent:", queryName, queryContent);
+        console.log("getQueries: added ", queryName);
     }
 
     return output;
