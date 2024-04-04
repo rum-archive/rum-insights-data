@@ -160,7 +160,7 @@ async function runBigQuery(query, outputPath, dryRun) {
                 const localDataRaw = await fs.readFile( outputPath, "utf8" );
                 const cachedData = JSON.parse( localDataRaw );
 
-                console.log("runBigQuery: merging new results with cached results", outputPath, cachedData.length, rows.length);
+                console.log("runBigQuery: merging new results with cached results", outputPath, "previous datapoints:", cachedData.length, "new datapoints:", rows.length);
 
                 rows = [...cachedData, ...rows];
             }
