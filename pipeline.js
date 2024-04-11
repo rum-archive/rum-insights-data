@@ -51,7 +51,12 @@ async function processResults( bigQueryResults ) {
             }
             else if ( query.processingtype === "groupedMetricPerDevice" ){
                 let processedData = [];
-                processedData = processing.processGroupedMetricPerDevicetype( data, query.extractmetric, query.groupby );
+
+                // quick and dirty adding full counts for the recent versions for web features baseline testing
+                if ( query.filename === "recent_useragentversion_useragentfamily_devicetype" )
+                    processedData = processing.processGroupedMetricPerDevicetype( data, query.extractmetric, query.groupby, true );
+                else 
+                    processedData = processing.processGroupedMetricPerDevicetype( data, query.extractmetric, query.groupby, false );
 
                 await fs.writeFile( outputPath, JSON.stringify(processedData), "utf8" );
             }

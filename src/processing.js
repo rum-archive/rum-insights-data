@@ -186,7 +186,7 @@ function processSingleMetricPerDevicetype(rows, metricFieldName) {
 }
 
 
-function processGroupedMetricPerDevicetype(rows, metricFieldName, groupbyFieldName) {
+function processGroupedMetricPerDevicetype(rows, metricFieldName, groupbyFieldName, includeFullCount = false) {
     /*
         This is similar to processSingleMetricPerDevicetype, but the metrics are grouped in another dimension
         For example, SingleMetric would be
@@ -304,6 +304,10 @@ function processGroupedMetricPerDevicetype(rows, metricFieldName, groupbyFieldNa
 
         // highcharts uses raw timestamps, so pre-calculate them
         datapoint.timestamp = "" + (new Date( row.date.value ).getTime());
+
+        if ( includeFullCount ) {
+            datapoint.count = row.beaconcount;
+        }
 
         if( percent > 0.1 ) {
             // skip entries that are 0.0 percent (especially in high-cardinality queries, these often account for many megabytes of output data)

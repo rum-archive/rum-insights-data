@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/rum-archive/rum-insights-data#readme",
   "dependencies": {
-    "@google-cloud/bigquery": "^6.0.3"
+    "@google-cloud/bigquery": "^6.0.3",
+    "web-features": "^0.6.3"
   }
 }
