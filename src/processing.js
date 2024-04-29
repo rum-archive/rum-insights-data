@@ -306,7 +306,11 @@ function processGroupedMetricPerDevicetype(rows, metricFieldName, groupbyFieldNa
         datapoint.timestamp = "" + (new Date( row.date.value ).getTime());
 
         if ( includeFullCount ) {
+            // TODO: full count now also implies os and osversion from hacking for the Baseline support
+            // this should be integrated properly, OR REMOVED ENTIRELY
             datapoint.count = row.beaconcount;
+            datapoint.os = row.os;
+            datapoint.osversion = row.osversion;
         }
 
         if( percent > 0.1 ) {

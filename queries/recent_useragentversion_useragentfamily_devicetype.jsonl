@@ -4,17 +4,18 @@
     "processingtype": "groupedMetricPerDevice",
     "extractmetric": "version",
     "groupby": "family",
-    "comments": "We exclude null values here due to the already high cardinality of results. We manually select the 'interesting' user agents for the same reason.",
+    "comments": "We exclude null values here due to the already high cardinality of results.",
     "sql": "
         SELECT DATE as date, 
         USERAGENTVERSION as version,
         USERAGENTFAMILY as family, 
+        OS as os,
+        OSVERSION as osversion,
         DEVICETYPE as device, 
         COUNT(*) as rowcount, 
         SUM(BEACONS) as beaconcount
-        FROM `akamai-mpulse-rumarchive.rumarchive.rumarchive_page_loads` 
-        WHERE DEVICETYPE IS NOT NULL and USERAGENTFAMILY IS NOT NULL AND USERAGENTVERSION IS NOT NULL AND {{DATES}}
-            AND USERAGENTFAMILY in ('Chrome', 'Chrome Mobile', 'Chrome Mobile WebView', 'Chrome Mobile iOS', 'Safari', 'Mobile Safari', 'Mobile Safari UI/WKWebView', 'Edge', 'Facebook', 'Firefox', 'Firefox Mobile', 'Opera', 'Opera Mini', 'Samsung Internet', 'Instagram')
-        GROUP BY DATE, DEVICETYPE, USERAGENTFAMILY, USERAGENTVERSION 
+        FROM `akamai-mpulse-rumarchive.rumarchive_test.rumarchive_page_loads` 
+        WHERE DEVICETYPE IS NOT NULL and OS IS NOT NULL and OSVERSION IS NOT NULL and USERAGENTFAMILY IS NOT NULL AND USERAGENTVERSION IS NOT NULL AND (DATE = \"2024-04-02\")
+        GROUP BY DATE, DEVICETYPE, USERAGENTFAMILY, USERAGENTVERSION, OS, OSVERSION 
         ORDER BY DATE ASC, DEVICETYPE ASC, USERAGENTFAMILY ASC, beaconcount DESC"
 }
