@@ -18,6 +18,6 @@
   "homepage": "https://github.com/rum-archive/rum-insights-data#readme",
   "dependencies": {
     "@google-cloud/bigquery": "^6.0.3",
-    "web-features": "^0.6.3"
+    "web-features": "^0.7.0-dev-20240429172226-6381320"
   }
 }
