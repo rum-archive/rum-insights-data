@@ -14,7 +14,7 @@
         DEVICETYPE as device, 
         COUNT(*) as rowcount, 
         SUM(BEACONS) as beaconcount
-        FROM `akamai-mpulse-rumarchive.rumarchive_test.rumarchive_page_loads` 
+        FROM `akamai-mpulse-rumarchive.rumarchive.rumarchive_page_loads` 
         WHERE DEVICETYPE IS NOT NULL and OS IS NOT NULL and OSVERSION IS NOT NULL and USERAGENTFAMILY IS NOT NULL AND USERAGENTVERSION IS NOT NULL AND (DATE = \"2024-04-02\")
         GROUP BY DATE, DEVICETYPE, USERAGENTFAMILY, USERAGENTVERSION, OS, OSVERSION 
         ORDER BY DATE ASC, DEVICETYPE ASC, USERAGENTFAMILY ASC, beaconcount DESC"

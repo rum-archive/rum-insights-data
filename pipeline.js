@@ -5,6 +5,7 @@ const {BigQuery} = require('@google-cloud/bigquery');
 
 const processing = require("./src/processing");
 const dates = require("./src/dates");
+const bcd = require("./src/browser-compat-calc");
 
 'use strict';
 
@@ -314,6 +315,8 @@ function main() {
 
     runPipeline();
     // runJustProcessorDEBUG(); // bypass the bigquery execution if we already have recent data in /data-cache
+
+    // bcd.transformBrowserCompatData("data-output"); // leaving this as manually enabled for now, since it doesn't happen too often
 }
 
 main(...process.argv.slice(2));
