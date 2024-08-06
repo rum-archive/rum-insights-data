@@ -65,6 +65,8 @@ async function transformBrowserCompatData( output_dir_name ){
 
     const outputPath = "./" + output_dir_name + "/baseline-browser-mappings.json";
     await fs.writeFile( outputPath, JSON.stringify(RUMArchiveToWebFeaturesMappings), "utf8" ); // overwrites by default
+
+    console.log("browser-compat-calc:transformBrowserCompatData : mappings for " + Object.keys(RUMArchiveToBCDMappings).concat(", ") + " written to " + outputPath);
 }
 
 module.exports = {
