@@ -52,7 +52,7 @@ function getDateArray( dateType ) {
         return [ tuesdays[ tuesdays.length - 1 ] ]; // most recent tuesday
     }
     else if ( dateType === "recent_month" ) {
-        return "(DATE BETWEEN '2024-06-01' AND '2024-07-31')";
+        return "(DATE BETWEEN '2024-08-01' AND '2024-08-31')";
     }
     else if ( dateType === "first_days" ) {
         const dates = [];
@@ -90,6 +90,7 @@ function getDateArray( dateType ) {
         dates.push("2024-05-01");
         dates.push("2024-06-01");
         dates.push("2024-07-01");
+        dates.push("2024-08-01");
 
         return dates; 
     }
@@ -118,6 +119,7 @@ function getDateArray( dateType ) {
         dates.push("2024-05-07");
         dates.push("2024-06-04");
         dates.push("2024-07-02");
+        dates.push("2024-08-06");
 
         return dates; 
     }
@@ -149,6 +151,7 @@ function getDateArray( dateType ) {
         dates.push("2024-05-21");
         dates.push("2024-06-18");
         dates.push("2024-07-16");
+        dates.push("2024-08-20");
 
         return dates; 
     }
