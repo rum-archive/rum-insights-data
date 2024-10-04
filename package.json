@@ -19,6 +19,6 @@
   "dependencies": {
     "@google-cloud/bigquery": "^6.0.3",
     "@mdn/browser-compat-data": "^5.5.24",
-    "web-features": "^0.8.1-dev-20240509031513-3dcbb63"
+    "web-features": ">0.8.1-dev-20240509031513-3dcbb63"
   }
 }
