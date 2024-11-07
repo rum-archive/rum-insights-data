@@ -309,9 +309,9 @@ async function runJustProcessorDEBUG(){
 
 function main() {
     
-    GLOBAL_DEBUG = false;
-    FORCE_SINGLE_DATE = false;
-    MERGE_CACHE_INSTEAD_OF_OVERRIDE = true;
+    GLOBAL_DEBUG = false; // should be false
+    FORCE_SINGLE_DATE = false; // should be false
+    MERGE_CACHE_INSTEAD_OF_OVERRIDE = true; // probably should be true
 
     runPipeline();
     // runJustProcessorDEBUG(); // bypass the bigquery execution if we already have recent data in /data-cache
