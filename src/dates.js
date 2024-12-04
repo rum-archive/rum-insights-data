@@ -52,7 +52,7 @@ function getDateArray( dateType ) {
         return [ tuesdays[ tuesdays.length - 1 ] ]; // most recent tuesday
     }
     else if ( dateType === "recent_month" ) {
-        return "(DATE BETWEEN '2024-10-01' AND '2024-10-31')";
+        return "(DATE BETWEEN '2024-11-01' AND '2024-11-30')";
     }
     else if ( dateType === "first_days" ) {
         const dates = [];
@@ -93,6 +93,7 @@ function getDateArray( dateType ) {
         dates.push("2024-08-01");
         dates.push("2024-09-01");
         dates.push("2024-10-01");
+        dates.push("2024-11-01");
 
         return dates; 
     }
@@ -124,6 +125,7 @@ function getDateArray( dateType ) {
         dates.push("2024-08-06");
         dates.push("2024-09-03");
         dates.push("2024-10-01");
+        dates.push("2024-11-05");
 
         return dates; 
     }
@@ -158,6 +160,7 @@ function getDateArray( dateType ) {
         dates.push("2024-08-20");
         dates.push("2024-09-17");
         dates.push("2024-10-15");
+        dates.push("2024-11-19");
 
         return dates; 
     }
