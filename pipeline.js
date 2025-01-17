@@ -316,7 +316,7 @@ function main() {
     runPipeline();
     // runJustProcessorDEBUG(); // bypass the bigquery execution if we already have recent data in /data-cache
 
-    // bcd.transformBrowserCompatData("data-output"); // leaving this as manually enabled for now, since it doesn't happen too often
+    bcd.transformBrowserCompatData("data-output");
 }
 
 main(...process.argv.slice(2));
