@@ -95,6 +95,7 @@ function getDateArray( dateType ) {
         dates.push("2024-10-01");
         dates.push("2024-11-01");
         dates.push("2024-12-01");
+        dates.push("2025-01-01");
 
         return dates; 
     }
@@ -128,6 +129,7 @@ function getDateArray( dateType ) {
         dates.push("2024-10-01");
         dates.push("2024-11-05");
         dates.push("2024-12-03");
+        dates.push("2025-01-07");
 
         return dates; 
     }
@@ -164,6 +166,7 @@ function getDateArray( dateType ) {
         dates.push("2024-10-15");
         dates.push("2024-11-19");
         dates.push("2024-12-17");
+        dates.push("2025-01-21");
 
         return dates; 
     }
