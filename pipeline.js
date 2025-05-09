@@ -54,7 +54,8 @@ async function processResults( bigQueryResults ) {
                 let processedData = [];
 
                 // quick and dirty adding full counts for the recent versions for web features baseline testing
-                if ( query.filename === "recent_useragentversion_useragentfamily_devicetype" )
+                // TODO: make this into a proper new processingtype? 
+                if ( query.filename.includes("recent_useragentversion_useragentfamily_devicetype") )
                     processedData = processing.processGroupedMetricPerDevicetype( data, query.extractmetric, query.groupby, true );
                 else 
                     processedData = processing.processGroupedMetricPerDevicetype( data, query.extractmetric, query.groupby, false );
@@ -147,7 +148,7 @@ async function runBigQuery(query, outputPath, dryRun) {
     if ( dryRun ) {
         console.log('runBigQuery: Job Statistics:');
         console.log('Status:', job.metadata.status);
-        console.log("Query dryrun: " + querySQLString);
+        console.log("Query dryrun: " + query.sql);
         console.log("Estimated mebibytes: " + (job.metadata.statistics.totalBytesProcessed / (1024 * 1024)));
         console.log(job.metadata.statistics);
 
@@ -190,6 +191,7 @@ async function getQueries() {
     // let queryNames = ["LCPCount_useragentfamily_mobile.jsonl"];
     // let queryNames = ["LCPCount_useragentfamily_desktop.jsonl", "LCPCount_useragentfamily_mobile.jsonl"];
     // let queryNames = ["devicetype.jsonl", "os_devicetype.jsonl"];
+    // let queryNames = ["recent_useragentversion_useragentfamily_devicetype_countrytemplate.jsonl"];
     let queryNames = [];
 
     if( queryNames.length === 0 ){
@@ -220,7 +222,9 @@ async function getQueries() {
     */
 
     const output = [];
+    const queryList = [];
 
+    // we loop over the queries in two phases, so we can generate extra queries based on templates that are then processed as if they came from full files
     for ( let queryName of queryNames ) {
         let queryContentRaw = await fs.readFile( path.join(QUERYDIR, queryName), "utf8" );
         // get rid of newlines in strings from .jsonl
@@ -232,6 +236,31 @@ async function getQueries() {
         if ( !queryContent.filename ) // allow manual overrides in the input file
             queryContent.filename = path.parse(queryName).name; // filename without the extension, used later in the pipeline for storing results
 
+        // TODO: don't use filename maybe, but rather look into the raw string contents if {{COUNTRY}} is present? 
+        if ( queryName.includes("countrytemplate") ) {
+            // templates allow us to have 1 query file that leads to multiple queries/output files
+            // There are the top 15 countries in the dataset on April 1st 2025 (by beaconcount)
+            let countryList = ["US", "GB", "JP", "IN", "CA", "FR", "MX", "AU", "IT", "KR", "ES", "NL", "BR", "TR", "PL"];
+
+            for ( country of countryList ) {
+                const countryQueryContent = JSON.parse(queryContentRaw); // to ensure we get a copy
+                countryQueryContent.sql = countryQueryContent.sql.replaceAll("{{COUNTRY}}", `(COUNTRY = '${country}')`);
+
+                console.log("getQueries: added country template for ", queryContent.filename, country);
+
+                // need to always override
+                // myquery_with_metrics_countrytemplate becomes myquery_with_metrics_US
+                countryQueryContent.filename = queryContent.filename.replace("countrytemplate", country);
+
+                queryList.push( countryQueryContent );
+            }
+        }
+        else 
+            queryList.push( queryContent ); // normal query, ready for further processing below
+    }
+
+    // now that we have all the conceptual queries in output, generate the rest of the data for them
+    for ( let queryContent of queryList ) {
         // we want to only run the queries for the data we actually need (or we'd use too much BigQuery quota)
         // so, we read the already cached data in data-cache and see which dates we already have
         // we then only keep the dates that we don't have in cache yet, and only query for those
@@ -268,7 +297,7 @@ async function getQueries() {
         output.push( queryContent );
 
         // console.log("getQueries:queryContent:", queryName, queryContent);
-        console.log("getQueries: added ", queryName);
+        console.log("getQueries: added ", queryContent.filename);
     }
 
     return output;

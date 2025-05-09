@@ -1,0 +1,21 @@
+{
+    "description": "Country-specific version of recent_useragentversion_useragentfamily_devicetype to allow splitting the WebFeatures Baseline overviews",
+    "datetype": "recent_day",
+    "processingtype": "groupedMetricPerDevice",
+    "extractmetric": "version",
+    "groupby": "family",
+    "comments": "We exclude null values here due to the already high cardinality of results.",
+    "sql": "
+        SELECT DATE as date,
+        USERAGENTVERSION as version,
+        USERAGENTFAMILY as family, 
+        OS as os,
+        OSVERSION as osversion,
+        DEVICETYPE as device, 
+        COUNT(*) as rowcount, 
+        SUM(BEACONS) as beaconcount
+        FROM `akamai-mpulse-rumarchive.rumarchive.rumarchive_page_loads` 
+        WHERE {{COUNTRY}} AND DEVICETYPE IS NOT NULL and OS IS NOT NULL and OSVERSION IS NOT NULL and USERAGENTFAMILY IS NOT NULL AND USERAGENTVERSION IS NOT NULL AND {{DATES}}
+        GROUP BY DATE, DEVICETYPE, USERAGENTFAMILY, USERAGENTVERSION, OS, OSVERSION 
+        ORDER BY DATE ASC, DEVICETYPE ASC, USERAGENTFAMILY ASC, beaconcount DESC"
+}
